@@ -1,4 +1,6 @@
 val scala3Version = "3.1.1"
+val AkkaVersion = "2.6.19"
+
 lazy val startupTransition: State => State = "writeHooks" :: _
 
 lazy val root = project
@@ -20,6 +22,11 @@ lazy val root = project
     ),
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.13" % Test,
-      "org.scalameta" %% "munit" % "0.7.29" % Test
+      "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion, // For standard log configuration
+      "com.typesafe.akka" %% "akka-remote" % AkkaVersion, // For akka remote
+      "com.typesafe.akka" %% "akka-cluster-typed" % AkkaVersion, // akka clustering module
+      "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,
+      "ch.qos.logback" % "logback-classic" % "1.2.3"
     )
   )
