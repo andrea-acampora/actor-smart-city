@@ -4,8 +4,8 @@ lazy val startupTransition: State => State = "writeHooks" :: _
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "scala-project",
-    assembly / assemblyJarName := "scala-project.jar",
+    name := "actor-smart-city",
+    assembly / assemblyJarName := "actor-smart-city.jar",
     scalaVersion := scala3Version,
     Global / onLoad := {
       val old = (Global / onLoad).value
