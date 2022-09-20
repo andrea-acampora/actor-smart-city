@@ -1,5 +1,5 @@
 {
-  "name": "Actor-Smart-City",
+  "name": "actor-smart-city",
   "devDependencies": {
     "@semantic-release/changelog": "6.0.1",
     "@semantic-release/exec": "6.0.2",
