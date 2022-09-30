@@ -2,10 +2,10 @@ import akka.actor.typed.{ActorSystem, Behavior}
 import akka.cluster.*
 import akka.actor.typed.scaladsl.*
 import akka.actor.typed.scaladsl.adapter.*
-import concurrent.duration.DurationInt
 
+import concurrent.duration.DurationInt
 import scala.util.Random
-import it.unibo.pcd.pluviometer.Pluviometer
+import it.unibo.pcd.pluviometer.{Pluviometer, ZoneManager}
 import it.unibo.pcd.firestation.FireStation
 import it.unibo.pcd.utils.startupWithRole
 
@@ -24,19 +24,19 @@ object Launcher:
   @main def launchAll(): Unit =
     for
       zone <- cityZones
-      _ = createRoleNode("fireStation")(FireStation())
+      fireStationRef = createRoleNode("fireStation")(FireStation())
+      zoneManagerRef = createRoleNode("zoneManager")(ZoneManager("zone" + cityZones.indexOf(zone), fireStationRef))
       _ <- 0 until pluviometersPerZone
       pluviometerPosition = (
         Random.between(zone.rangeX._1, zone.rangeX._2),
         Random.between(zone.rangeY._1, zone.rangeY._2)
       )
       _ = createRoleNode("pluviometer")(
-        Pluviometer(pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
+        Pluviometer(zoneManagerRef, pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
       )
     yield ()
     createRoleNode("fireStationFrontend")(FireStation())
 
   def createRoleNode[X](role: String)(root: => Behavior[X]): ActorSystem[X] =
     currentAvailablePort = currentAvailablePort + 1
-    println("port" + currentAvailablePort + root.behavior)
     startupWithRole(role, currentAvailablePort)(root)
