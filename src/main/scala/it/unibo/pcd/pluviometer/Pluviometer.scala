@@ -4,6 +4,8 @@ import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.*
+import akka.cluster.typed.{Cluster, Join}
+
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 
@@ -17,6 +19,8 @@ object Pluviometer:
   final case class CheckAlarm() extends Command
   final case class AlarmConfirmed() extends Command
   final case class StopAlarm() extends Command
+  val waterLevelAlarm: Int = 200
+  val service: ServiceKey[Command] = ServiceKey[Command]("service")
 
   def apply(
       zoneManagerRef: ActorRef[Command],
@@ -25,9 +29,12 @@ object Pluviometer:
       serviceKey: String
   ): Behavior[Command] =
     Behaviors.setup[Command] { ctx =>
-      ctx.system.receptionist ! Receptionist.Register(ServiceKey[Command](serviceKey), ctx.self)
+      val cluster = Cluster(ctx.system)
+      cluster.manager ! Join(cluster.selfMember.address)
+      ctx.log.info("state = " + cluster.state)
       Behaviors.withTimers { timers =>
         timers.startTimerAtFixedRate(CheckWaterLevel, period)
+        ctx.system.receptionist ! Receptionist.Register(Pluviometer.service, ctx.self)
         baseBehaviour(zoneManagerRef, position, ctx, false, 0)
       }
     }
@@ -37,17 +44,22 @@ object Pluviometer:
       position: (Int, Int),
       ctx: ActorContext[Command],
       inAlarm: Boolean,
-      waterLevel: Double
+      waterLevel: Int
   ): Behavior[Command] = Behaviors.receiveMessage {
     case CheckWaterLevel =>
-      if (Random.nextInt(10) == 1)
+      val newWaterLevel = waterLevel + Random.nextInt(10)
+      ctx.log.info("pluviometer " + position + " waterLevel = " + newWaterLevel)
+      if (newWaterLevel >= waterLevelAlarm)
         zoneManagerRef ! NotifyAlarm()
-        baseBehaviour(zoneManagerRef, position, ctx, true, waterLevel)
-      Behaviors.same
+        ctx.log.info("pluviometer " + position + " waterLevel high")
+        baseBehaviour(zoneManagerRef, position, ctx, true, newWaterLevel)
+      else baseBehaviour(zoneManagerRef, position, ctx, false, newWaterLevel)
     case CheckAlarm() =>
       zoneManagerRef ! NotifyState(inAlarm)
       Behaviors.same
-    case AlarmConfirmed() => alarmBehaviour(zoneManagerRef, position, ctx)
+    case AlarmConfirmed() =>
+      ctx.log.info("pluviometer " + position + " alarm confirmed")
+      alarmBehaviour(zoneManagerRef, position, ctx)
     case _ => Behaviors.same
   }
 
