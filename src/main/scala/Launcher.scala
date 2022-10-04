@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.adapter.*
 import concurrent.duration.DurationInt
 import scala.util.Random
 import it.unibo.pcd.pluviometer.{Pluviometer, ZoneManager}
-import it.unibo.pcd.firestation.FireStation
+import it.unibo.pcd.firestation.{FireStation, FireStationFrontend}
 import it.unibo.pcd.utils.startupWithRole
 
 import scala.language.postfixOps
@@ -37,7 +37,7 @@ object Launcher:
         Pluviometer(zoneManagerRef, pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
       )
     yield ()
-    createRoleNode("fireStationFrontend")(FireStation())
+    createRoleNode("fireStationFrontend")(FireStationFrontend())
 
   def createRoleNode[X](role: String)(root: => Behavior[X]): ActorSystem[X] =
     currentAvailablePort = currentAvailablePort + 1

@@ -3,15 +3,17 @@ package it.unibo.pcd.pluviometer
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.{Receptionist, ServiceKey}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import it.unibo.pcd.pluviometer.Pluviometer.{
+import akka.cluster.typed.{Cluster, Join}
+import it.unibo.pcd.utils.Protocol.{
   AlarmConfirmed,
+  AlarmOver,
   CheckAlarm,
   Command,
+  InterventionRequest,
   NotifyAlarm,
   NotifyState,
-  baseBehaviour
+  PluviometersChange
 }
-import akka.cluster.typed.{Cluster, Join}
 
 object ZoneManager:
 
@@ -22,8 +24,6 @@ object ZoneManager:
       fireStation: ActorRef[Command]
   ): Behavior[Command | Receptionist.Listing] =
     Behaviors.setup[Command | Receptionist.Listing] { ctx =>
-      val cluster = Cluster(ctx.system)
-      cluster.manager ! Join(cluster.selfMember.address)
       ctx.system.receptionist ! Receptionist.Subscribe(ServiceKey[Command](serviceKey), ctx.self)
       zoneManagerLogic(ctx, serviceKey, fireStation, List.empty)
     }
@@ -37,11 +37,12 @@ object ZoneManager:
     Behaviors.receiveMessage {
       case msg: Receptionist.Listing =>
         val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
-        if (pluviometersList == pluviometers)
-          Behaviors.same
+        if (pluviometersList == pluviometers) Behaviors.same
         else
+          fireStation ! PluviometersChange(pluviometersList)
           zoneManagerLogic(ctx, serviceKey, fireStation, pluviometersList)
       case NotifyAlarm() =>
+        ctx.log.info("manager of " + serviceKey + " notified an alarm")
         pluviometers.foreach(_ ! CheckAlarm())
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
       case _ => Behaviors.same
@@ -56,10 +57,9 @@ object ZoneManager:
   ): Behavior[Command | Receptionist.Listing] = Behaviors.receiveMessage {
     case msg: Receptionist.Listing =>
       val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
-      ctx.log.info("List received: " + pluviometersList)
-      if (pluviometersList == pluviometers)
-        Behaviors.same
+      if (pluviometersList == pluviometers) Behaviors.same
       else
+        fireStation ! PluviometersChange(pluviometersList)
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case NotifyState(state) =>
       val updatedNotifications: Notification =
@@ -69,10 +69,28 @@ object ZoneManager:
       if (updatedNotifications.alarm + updatedNotifications.notAlarm == pluviometers.size)
         if (updatedNotifications.alarm > updatedNotifications.notAlarm)
           pluviometers.foreach(_ ! AlarmConfirmed())
-          //behavior per aspettare messaggio firestation
-          manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
+          fireStation ! InterventionRequest(ctx.self)
+          waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
         else zoneManagerLogic(ctx, serviceKey, fireStation, pluviometers)
       else
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
     case _ => Behaviors.same
+  }
+
+  def waitingFireFightersBehaviour(
+      ctx: ActorContext[Command | Receptionist.Listing],
+      serviceKey: String,
+      fireStation: ActorRef[Command],
+      pluviometers: List[ActorRef[Command]],
+      notifications: Notification
+  ): Behavior[Command | Receptionist.Listing] = Behaviors.receiveMessage {
+    case msg: Receptionist.Listing =>
+      val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
+      if (pluviometersList == pluviometers) Behaviors.same
+      else
+        fireStation ! PluviometersChange(pluviometersList)
+        waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
+    case AlarmOver() =>
+      pluviometers.foreach(_ ! AlarmOver())
+      zoneManagerLogic(ctx, serviceKey, fireStation, pluviometers)
   }
