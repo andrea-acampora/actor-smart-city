@@ -37,14 +37,11 @@ object ZoneManager:
     Behaviors.receiveMessage {
       case msg: Receptionist.Listing =>
         val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
-        ctx.log.info("list = " + pluviometersList)
         if (pluviometersList == pluviometers)
           Behaviors.same
         else
           zoneManagerLogic(ctx, serviceKey, fireStation, pluviometersList)
       case NotifyAlarm() =>
-        ctx.log.info("received alarm, size = " + pluviometers.size)
-
         pluviometers.foreach(_ ! CheckAlarm())
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
       case _ => Behaviors.same
@@ -59,6 +56,7 @@ object ZoneManager:
   ): Behavior[Command | Receptionist.Listing] = Behaviors.receiveMessage {
     case msg: Receptionist.Listing =>
       val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
+      ctx.log.info("List received: " + pluviometersList)
       if (pluviometersList == pluviometers)
         Behaviors.same
       else
