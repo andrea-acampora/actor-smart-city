@@ -23,10 +23,9 @@ object Launcher:
   var currentAvailablePort: Int = 2551
 
   @main def launchAll(): Unit =
-
     for
       zone <- cityZones
-      fireStationRef = createRoleNode("fireStation")(FireStation())
+      fireStationRef = createRoleNode("fireStation")(FireStation(cityZones.indexOf(zone)))
       zoneManagerRef = createRoleNode("zoneManager")(ZoneManager("zone" + cityZones.indexOf(zone), fireStationRef))
       _ <- 0 until pluviometersPerZone
       pluviometerPosition = (
