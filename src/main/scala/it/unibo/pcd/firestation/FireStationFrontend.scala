@@ -3,16 +3,17 @@ package it.unibo.pcd.firestation
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import it.unibo.pcd.Launcher.Zone
 import it.unibo.pcd.utils.Protocol.{
   AlarmOver,
   Command,
   FireStationAction,
   FireStationActionOver,
   InterventionRequest,
+  NotifyFireStation,
   NotifyFrontEnd,
   PluviometersChange,
-  ZoneInAlarm,
-  NotifyFireStation
+  ZoneInAlarm
 }
 import it.unibo.pcd.firestation.FireStation
 
@@ -23,10 +24,10 @@ object FireStationFrontend:
   val width = 800
   val height = 600
 
-  def apply(): Behavior[Command | Receptionist.Listing] =
+  def apply(zone: Int, nZones: List[Zone]): Behavior[Command | Receptionist.Listing] =
     Behaviors.setup[Command | Receptionist.Listing] { ctx =>
       ctx.system.receptionist ! Receptionist.Subscribe(FireStation.service, ctx.self)
-//      val gui = FireStationGUI(width, height)
+      val gui = FireStationGUI(width, height, zone, nZones, ctx.self)
       frontendLogic(ctx, Map.empty)
     }
 

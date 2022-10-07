@@ -1,15 +1,13 @@
+package it.unibo.pcd
+
 import akka.actor.typed.{ActorSystem, Behavior}
-import akka.cluster.*
-import akka.actor.typed.scaladsl.*
-import akka.actor.typed.scaladsl.adapter.*
-
-import concurrent.duration.DurationInt
-import scala.util.Random
-import it.unibo.pcd.pluviometer.{Pluviometer, ZoneManager}
 import it.unibo.pcd.firestation.{FireStation, FireStationFrontend}
-import it.unibo.pcd.utils.startupWithRole
+import it.unibo.pcd.pluviometer.{Pluviometer, ZoneManager}
 
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
+import scala.util.Random
+import it.unibo.pcd.utils.startupWithRole
 
 object Launcher:
 
@@ -36,7 +34,7 @@ object Launcher:
         Pluviometer(zoneManagerRef, pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
       )
     yield ()
-    createRoleNode("fireStationFrontend")(FireStationFrontend())
+    createRoleNode("fireStationFrontend")(FireStationFrontend(3, cityZones))
 
   def createRoleNode[X](role: String)(root: => Behavior[X]): ActorSystem[X] =
     currentAvailablePort = currentAvailablePort + 1
