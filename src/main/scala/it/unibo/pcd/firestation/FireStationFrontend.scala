@@ -9,6 +9,7 @@ import it.unibo.pcd.utils.Protocol.{
   Command,
   FireStationAction,
   FireStationActionOver,
+  FireStationInZone,
   InterventionRequest,
   NotifyFireStation,
   NotifyFrontEnd,
@@ -24,16 +25,18 @@ object FireStationFrontend:
   val width = 800
   val height = 600
 
-  def apply(zone: Int, nZones: List[Zone]): Behavior[Command | Receptionist.Listing] =
+  def apply(nZones: List[Zone]): Behavior[Command | Receptionist.Listing] =
     Behaviors.setup[Command | Receptionist.Listing] { ctx =>
       ctx.system.receptionist ! Receptionist.Subscribe(FireStation.service, ctx.self)
-      val gui = FireStationGUI(width, height, zone, nZones, ctx.self)
-      frontendLogic(ctx, Map.empty)
+      val gui = FireStationGUI(width, height, nZones, ctx.self)
+      frontendLogic(ctx, gui, Map.empty, Map.empty)
     }
 
   def frontendLogic(
       ctx: ActorContext[Command | Receptionist.Listing],
-      fireStations: Map[Int, ActorRef[Command]]
+      gui: FireStationGUI,
+      fireStations: Map[Int, ActorRef[Command]],
+      pluviometersPerZone: Map[Int, Int]
   ): Behavior[Command | Receptionist.Listing] =
     Behaviors.receiveMessage {
       case msg: Receptionist.Listing =>
@@ -41,10 +44,17 @@ object FireStationFrontend:
         if (fireStationList == fireStations.values.toList) Behaviors.same
         else
           fireStationList.foreach(_ ! NotifyFrontEnd(ctx.self))
-          frontendLogic(ctx, fireStations)
-      case NotifyFireStation(zone: Int, fireStation: ActorRef[Command]) =>
-        frontendLogic(ctx, fireStations + (zone -> fireStation))
-      case ZoneInAlarm(zone) => ??? //display della zone in allarme
+          frontendLogic(ctx, gui, fireStations, pluviometersPerZone)
+      case NotifyFireStation(fireStationInZone: FireStationInZone, fireStation: ActorRef[Command]) =>
+        frontendLogic(
+          ctx,
+          gui,
+          fireStations + (fireStationInZone.zone -> fireStation),
+          pluviometersPerZone + (fireStationInZone.zone -> fireStationInZone.numberOfPluviometers)
+        )
+      case ZoneInAlarm(zone: Int) =>
+        gui.updateZoneStatus(zone, false)
+        Behaviors.same
       case FireStationAction(zone: Int) =>
         if (fireStations.contains(zone))
           fireStations(zone) ! FireStationAction(zone)
@@ -53,4 +63,5 @@ object FireStationFrontend:
         if (fireStations.contains(zone))
           fireStations(zone) ! FireStationActionOver(zone)
         Behaviors.same
+      case _ => Behaviors.same
     }

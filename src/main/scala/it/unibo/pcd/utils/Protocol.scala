@@ -16,4 +16,6 @@ object Protocol:
   final case class NotifyFrontEnd(frontEnd: ActorRef[Command]) extends Command
   final case class FireStationAction(zone: Int) extends Command
   final case class FireStationActionOver(zone: Int) extends Command
-  final case class NotifyFireStation(zone: Int, fireStation: ActorRef[Command]) extends Command
+  final case class NotifyFireStation(fireStationInZone: FireStationInZone, fireStation: ActorRef[Command])
+      extends Command
+  final case class FireStationInZone(zone: Int, numberOfPluviometers: Int)

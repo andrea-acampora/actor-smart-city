@@ -6,101 +6,54 @@ import akka.actor.typed.scaladsl.*
 import it.unibo.pcd.Launcher.Zone
 
 import javax.swing.{BoxLayout, JButton, JFrame, JLabel, JPanel, SwingUtilities}
-import java.awt.{BorderLayout, Canvas, Color, Dimension, Graphics}
-import it.unibo.pcd.utils.Protocol.Command
+import java.awt.{BorderLayout, Canvas, Color, Dimension, Graphics, GridLayout}
+import it.unibo.pcd.utils.Protocol.{Command, FireStationAction, FireStationActionOver}
 
 import java.awt.event.{ActionEvent, ActionListener}
+import java.awt.geom.Rectangle2D
 
-class FireStationGUI(val width: Int, val height: Int, zone: Int, cityZones: List[Zone], act: ActorRef[Command]):
+class FireStationGUI(val width: Int, val height: Int, cityZones: List[Zone], frontendActor: ActorRef[Command]):
   self =>
-  var firestationStatus: List[(Int, String)] = List.empty
+  var zoneButtons: List[JButton] = List.empty
+  var zonePluviometers: Map[Int, Int] = Map.empty
   private val frame = JFrame()
-  private val canvas = Environment()
-  canvas.setSize(width, height)
   frame.setSize(width, height)
-  frame.setTitle("Firestation of zone: " + zone)
-  val optPanel = JPanel()
-  val manageBtn = JButton("Manage alarm")
-
-//  manageBtn.addActionListener(new ActionListener {
-//    override def actionPerformed(e: ActionEvent): Unit =
-//      act ! FireStation.ManageAlarm
-//  })
-
-  val resolveBtn = JButton("Resolve alarm")
-//  resolveBtn.addActionListener(new ActionListener {
-//    override def actionPerformed(e: ActionEvent): Unit =
-//      act ! FireStation.ResolveAlarm
-//  })
-  optPanel.add(manageBtn)
-  optPanel.add(resolveBtn)
-  val stationPanel = JPanel()
-  stationPanel.setLayout(new BoxLayout(stationPanel, BoxLayout.Y_AXIS))
-  val layout = BorderLayout()
+  frame.setTitle("Firestation Frontend")
+  val layout = GridLayout(2, 2, 1, 1)
   frame.setLayout(layout)
   frame.setLocationRelativeTo(null)
-  frame.add(canvas, BorderLayout.NORTH)
-  frame.add(optPanel, BorderLayout.SOUTH)
-  frame.add(stationPanel, BorderLayout.EAST)
   frame.setVisible(true)
-  canvas.setVisible(true)
-
-//  def updateStationsStatus(l: (Int, String)): Unit =
-//    if firestationStatus.map(e => e._1).contains(l._1) then
-//      firestationStatus = firestationStatus.map(e => if e._1 == l._1 then l else e)
-//    else firestationStatus = firestationStatus :+ l
-//
-//    stationPanel.removeAll()
-//    for f <- firestationStatus
-//    yield stationPanel.add(JLabel("Station: " + f._1 + " Status: " + f._2))
-//    stationPanel.revalidate()
-//    stationPanel.repaint()
-
-  def render(elements: Map[Int, ActorRef[Command]]): Unit = SwingUtilities.invokeLater { () =>
-    canvas.elements = elements
-    canvas.invalidate()
-    canvas.repaint()
+  cityZones.foreach { zone =>
+    val button: JButton = JButton("Zone " + cityZones.indexOf(zone) + " - " + "Pluoviometers = ?")
+    button.setBackground(Color.GREEN)
+    zoneButtons = zoneButtons ++ List(button)
   }
+  zoneButtons.foreach(frame.add(_))
 
-  private class Environment extends JPanel:
-    var elements: Map[Int, ActorRef[Command]] = Map.empty
+  def updateZoneStatus(zone: Int, state: Boolean): Unit =
+    state match
+      case true =>
+        self.zoneButtons(zone).setBackground(Color.GREEN)
+        self.zoneButtons(zone).getActionListeners.foreach(self.zoneButtons(zone).removeActionListener(_))
+      case false =>
+        self.zoneButtons(zone).setBackground(Color.RED)
+        self.zoneButtons(zone).addActionListener(_ => fireStationAction(zone))
 
-//    val grid: GridLayout = new GridLayout
-//    grid.setColumns(2)
-//    grid.setRows(2)
-//    grid.setHgap(0)
-//    grid.setVgap(0)
-//    setLayout(grid);
+  def updatePluviometers(pluviometersPerZone: Map[Int, Int]): Unit =
+    zonePluviometers = pluviometersPerZone
+    zoneButtons.foreach { btn =>
+      btn.setText(
+        "Zone " + cityZones.indexOf(btn) + " - " + "Pluoviometers = " + zonePluviometers(zoneButtons.indexOf(btn))
+      )
+    }
 
-    override def getPreferredSize = new Dimension(self.width, self.height)
+  def fireStationAction(zone: Int): Unit =
+    self.zoneButtons(zone).setBackground(Color.ORANGE)
+    self.frontendActor ! FireStationAction(zone)
+    self.zoneButtons(zone).getActionListeners.foreach(self.zoneButtons(zone).removeActionListener(_))
+    self.zoneButtons(zone).addActionListener(_ => fireStationActionOver(zone))
 
-    override def paintComponent(g: Graphics): Unit =
-      g.clearRect(0, 0, self.width, self.height)
-      val cellWidth = self.width / (self.cityZones.size / 2)
-      val cellHeight = self.height / (self.cityZones.size / 2)
-      self.cityZones.foreach(zone => g.fillRect(zone.rangeX._1 * 100, zone.rangeY._1 * 100, cellWidth, cellHeight))
-//      for
-//        e <- elements
-//        z = e._1
-//        alarm = e._2
-//        ns = e._3
-//        xs = z.x + (z.offsetX / 5).toInt
-//        ys = z.y + (z.offsetY / 2).toInt
-//      do
-//        alarm match {
-//          case "NoAlarm" => g.setColor(Color.GREEN)
-//          case "UnderManagement" => g.setColor(Color.YELLOW)
-//          case "Alarm" => g.setColor(Color.RED)
-//        }
-//        g.fillRect(z.x, z.y, z.offsetX, z.offsetY)
-//        g.setColor(Color.BLACK)
-//        g.drawString("Zone: " + z.index + " #Sensors: " + ns, xs, ys)
-
-object TryGui extends App:
-  val g = FireStationGUI(
-    1_000,
-    1_000,
-    1,
-    List(Zone((0, 5), (0, 5)), Zone((5, 10), (0, 5)), Zone((0, 5), (5, 10)), Zone((5, 10), (5, 10))),
-    null
-  )
+  def fireStationActionOver(zone: Int): Unit =
+    self.zoneButtons(zone).getActionListeners.foreach(self.zoneButtons(zone).removeActionListener(_))
+    self.zoneButtons(zone).setBackground(Color.GREEN)
+    self.frontendActor ! FireStationActionOver(zone)

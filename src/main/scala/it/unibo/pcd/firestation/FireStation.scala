@@ -8,11 +8,12 @@ import it.unibo.pcd.utils.Protocol.{
   Command,
   FireStationAction,
   FireStationActionOver,
+  FireStationInZone,
   InterventionRequest,
   NotifyFireStation,
+  NotifyFrontEnd,
   PluviometersChange,
-  ZoneInAlarm,
-  NotifyFrontEnd
+  ZoneInAlarm
 }
 
 object FireStation:
@@ -41,7 +42,7 @@ object FireStation:
       case FireStationAction(zone: Int) =>
         fireStationInAction(ctx, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
-        frontEnd ! NotifyFireStation(zone, ctx.self)
+        frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
         if (frontends.contains(frontEnd))
           Behaviors.same
         else
@@ -63,9 +64,10 @@ object FireStation:
       case FireStationActionOver(zone: Int) =>
         fireStationLogic(ctx, false, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
-        frontEnd ! NotifyFireStation(zone, ctx.self)
+        frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
         if (frontends.contains(frontEnd))
           Behaviors.same
         else
           fireStationInAction(ctx, zoneInAlarm, fireStationState, pluviometers, zone, frontEnd :: frontends)
+      case _ => Behaviors.same
     }

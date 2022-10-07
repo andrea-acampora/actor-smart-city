@@ -15,8 +15,7 @@ object Launcher:
 
   val citySize: (Int, Int) = (10, 10)
   val cityZones: List[Zone] =
-    //List(Zone((0, 5), (0, 5)), Zone((5, 10), (0, 5)), Zone((0, 5), (5, 10)), Zone((5, 10), (5, 10)))
-    List(Zone((0, 5), (0, 5)))
+    List(Zone((0, 5), (0, 5)), Zone((5, 10), (0, 5)), Zone((0, 5), (5, 10)), Zone((5, 10), (5, 10)))
   val pluviometersPerZone: Int = 3
   var currentAvailablePort: Int = 2551
 
@@ -34,7 +33,7 @@ object Launcher:
         Pluviometer(zoneManagerRef, pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
       )
     yield ()
-    createRoleNode("fireStationFrontend")(FireStationFrontend(3, cityZones))
+    createRoleNode("fireStationFrontend")(FireStationFrontend(cityZones))
 
   def createRoleNode[X](role: String)(root: => Behavior[X]): ActorSystem[X] =
     currentAvailablePort = currentAvailablePort + 1
