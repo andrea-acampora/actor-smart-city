@@ -15,7 +15,6 @@ import java.awt.geom.Rectangle2D
 class FireStationGUI(val width: Int, val height: Int, cityZones: List[Zone], frontendActor: ActorRef[Command]):
   self =>
   var zoneButtons: List[JButton] = List.empty
-  var zonePluviometers: Map[Int, Int] = Map.empty
   private val frame = JFrame()
   frame.setSize(width, height)
   frame.setTitle("Firestation Frontend")
@@ -39,13 +38,10 @@ class FireStationGUI(val width: Int, val height: Int, cityZones: List[Zone], fro
         self.zoneButtons(zone).setBackground(Color.RED)
         self.zoneButtons(zone).addActionListener(_ => fireStationAction(zone))
 
-  def updatePluviometers(pluviometersPerZone: Map[Int, Int]): Unit =
-    zonePluviometers = pluviometersPerZone
-    zoneButtons.foreach { btn =>
-      btn.setText(
-        "Zone " + cityZones.indexOf(btn) + " - " + "Pluoviometers = " + zonePluviometers(zoneButtons.indexOf(btn))
-      )
-    }
+  def updatePluviometers(pluviometersPerZone: (Int, Int)): Unit =
+    zoneButtons(pluviometersPerZone._1).setText(
+      "Zone " + pluviometersPerZone._1 + " - " + "Pluoviometers = " + pluviometersPerZone._2
+    )
 
   def fireStationAction(zone: Int): Unit =
     self.zoneButtons(zone).setBackground(Color.ORANGE)

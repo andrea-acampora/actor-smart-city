@@ -22,11 +22,12 @@ object FireStation:
 
   def apply(zone: Int): Behavior[Command] = Behaviors.setup[Command] { ctx =>
     ctx.system.receptionist ! Receptionist.Register(service, ctx.self)
-    fireStationLogic(ctx, false, false, List.empty, zone, List.empty)
+    fireStationLogic(ctx, Option.empty, false, false, List.empty, zone, List.empty)
   }
 
   def fireStationLogic(
       ctx: ActorContext[Command],
+      zoneManager: Option[ActorRef[Command]],
       zoneInAlarm: Boolean,
       fireStationState: Boolean,
       pluviometers: List[ActorRef[Command]],
@@ -35,23 +36,28 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case InterventionRequest(zoneManager: ActorRef[Command]) =>
+        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received intervention request")
         frontends.foreach(_ ! ZoneInAlarm(zone))
-        fireStationLogic(ctx, true, fireStationState, pluviometers, zone, frontends)
+        fireStationLogic(ctx, Some(zoneManager), true, fireStationState, pluviometers, zone, frontends)
       case PluviometersChange(pluviometerList) =>
-        fireStationLogic(ctx, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
+        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received pluviometers: " + pluviometerList.size)
+        frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
+        fireStationLogic(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationAction(zone: Int) =>
-        fireStationInAction(ctx, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
+        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received fireStation Action !")
+        fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
         frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
         if (frontends.contains(frontEnd))
           Behaviors.same
         else
-          fireStationLogic(ctx, zoneInAlarm, fireStationState, pluviometers, zone, frontEnd :: frontends)
+          fireStationLogic(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometers, zone, frontEnd :: frontends)
       case _ => Behaviors.same
     }
 
   def fireStationInAction(
       ctx: ActorContext[Command],
+      zoneManager: Option[ActorRef[Command]],
       zoneInAlarm: Boolean,
       fireStationState: Boolean,
       pluviometers: List[ActorRef[Command]],
@@ -60,14 +66,26 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case PluviometersChange(pluviometerList) =>
-        fireStationInAction(ctx, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
+        ctx.log.info("FIRE_STATION: received pluviometers: " + pluviometerList.size)
+        frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
+        fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationActionOver(zone: Int) =>
-        fireStationLogic(ctx, false, fireStationState, pluviometers, zone, frontends)
+        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received fireStation Action  over!")
+        if (zoneManager.isDefined) zoneManager.get ! AlarmOver()
+        fireStationLogic(ctx, zoneManager, false, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
         frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
         if (frontends.contains(frontEnd))
           Behaviors.same
         else
-          fireStationInAction(ctx, zoneInAlarm, fireStationState, pluviometers, zone, frontEnd :: frontends)
+          fireStationInAction(
+            ctx,
+            zoneManager,
+            zoneInAlarm,
+            fireStationState,
+            pluviometers,
+            zone,
+            frontEnd :: frontends
+          )
       case _ => Behaviors.same
     }

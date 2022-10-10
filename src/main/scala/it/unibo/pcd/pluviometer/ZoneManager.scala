@@ -39,10 +39,11 @@ object ZoneManager:
         val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
         if (pluviometersList == pluviometers) Behaviors.same
         else
+          ctx.log.info("PROTOCOL: ZONE_MANAGER of " + serviceKey + " received pluviometers: " + pluviometersList.size)
           fireStation ! PluviometersChange(pluviometersList)
           zoneManagerLogic(ctx, serviceKey, fireStation, pluviometersList)
       case NotifyAlarm() =>
-        ctx.log.info("manager of " + serviceKey + " notified an alarm")
+        ctx.log.info("PROTOCOL: manager of " + serviceKey + " notified an alarm")
         pluviometers.foreach(_ ! CheckAlarm())
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
       case _ => Behaviors.same
@@ -59,6 +60,7 @@ object ZoneManager:
       val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
       if (pluviometersList == pluviometers) Behaviors.same
       else
+        ctx.log.info("PROTOCOL: ZONE_MANAGER of " + serviceKey + " received pluviometers: " + pluviometersList.size)
         fireStation ! PluviometersChange(pluviometersList)
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case NotifyState(state) =>
@@ -88,9 +90,11 @@ object ZoneManager:
       val pluviometersList: List[ActorRef[Command]] = msg.serviceInstances(ServiceKey[Command](serviceKey)).toList
       if (pluviometersList == pluviometers) Behaviors.same
       else
+        ctx.log.info("PROTOCOL: ZONE_MANAGER of " + serviceKey + " received pluviometers: " + pluviometersList.size)
         fireStation ! PluviometersChange(pluviometersList)
         waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case AlarmOver() =>
       pluviometers.foreach(_ ! AlarmOver())
       zoneManagerLogic(ctx, serviceKey, fireStation, pluviometers)
+    case _ => Behaviors.same
   }

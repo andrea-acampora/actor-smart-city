@@ -20,6 +20,7 @@ object Launcher:
   var currentAvailablePort: Int = 2551
 
   @main def launchAll(): Unit =
+    createRoleNode("fireStationFrontend")(FireStationFrontend(cityZones))
     for
       zone <- cityZones
       fireStationRef = createRoleNode("fireStation")(FireStation(cityZones.indexOf(zone)))
@@ -29,11 +30,11 @@ object Launcher:
         Random.between(zone.rangeX._1, zone.rangeX._2),
         Random.between(zone.rangeY._1, zone.rangeY._2)
       )
+      _ = println("creating pluviometer: " + pluviometerPosition + " in zone : " + cityZones.indexOf(zone))
       _ = createRoleNode("pluviometer")(
         Pluviometer(zoneManagerRef, pluviometerPosition, 60 milliseconds, "zone" + cityZones.indexOf(zone))
       )
     yield ()
-    createRoleNode("fireStationFrontend")(FireStationFrontend(cityZones))
 
   def createRoleNode[X](role: String)(root: => Behavior[X]): ActorSystem[X] =
     currentAvailablePort = currentAvailablePort + 1

@@ -46,6 +46,10 @@ object FireStationFrontend:
           fireStationList.foreach(_ ! NotifyFrontEnd(ctx.self))
           frontendLogic(ctx, gui, fireStations, pluviometersPerZone)
       case NotifyFireStation(fireStationInZone: FireStationInZone, fireStation: ActorRef[Command]) =>
+        ctx.log.info(
+          "PROTOCOL: FIRE_STATION_FRONTEND: received pluviometers: " + fireStationInZone.numberOfPluviometers
+        )
+        gui.updatePluviometers((fireStationInZone.zone, fireStationInZone.numberOfPluviometers))
         frontendLogic(
           ctx,
           gui,
