@@ -36,15 +36,12 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case InterventionRequest(zoneManager: ActorRef[Command]) =>
-        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received intervention request")
         frontends.foreach(_ ! ZoneInAlarm(zone))
         fireStationLogic(ctx, Some(zoneManager), true, fireStationState, pluviometers, zone, frontends)
       case PluviometersChange(pluviometerList) =>
-        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received pluviometers: " + pluviometerList.size)
         frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
         fireStationLogic(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationAction(zone: Int) =>
-        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received fireStation Action !")
         fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
         frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
@@ -66,11 +63,9 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case PluviometersChange(pluviometerList) =>
-        ctx.log.info("FIRE_STATION: received pluviometers: " + pluviometerList.size)
         frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
         fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationActionOver(zone: Int) =>
-        ctx.log.info("PROTOCOL: FIRE_STATION of zone : " + zone + " received fireStation Action  over!")
         if (zoneManager.isDefined) zoneManager.get ! AlarmOver()
         fireStationLogic(ctx, zoneManager, false, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
