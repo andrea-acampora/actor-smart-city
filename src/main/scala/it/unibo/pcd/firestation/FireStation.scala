@@ -13,7 +13,7 @@ import it.unibo.pcd.utils.Protocol.{
   NotifyFireStation,
   NotifyFrontEnd,
   PluviometersChange,
-  ZoneInAlarmBehavior
+  ZoneInAlarm
 }
 
 object FireStation:
@@ -36,7 +36,7 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case InterventionRequest(zoneManager: ActorRef[Command]) =>
-        frontends.foreach(_ ! ZoneInAlarmBehavior(zone))
+        frontends.foreach(_ ! ZoneInAlarm(zone))
         baseBehavior(ctx, Some(zoneManager), true, fireStationState, pluviometers, zone, frontends)
       case PluviometersChange(pluviometerList) =>
         frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))

@@ -14,7 +14,7 @@ import it.unibo.pcd.utils.Protocol.{
   NotifyFireStation,
   NotifyFrontEnd,
   PluviometersChange,
-  ZoneInAlarmBehavior
+  ZoneInAlarm
 }
 import it.unibo.pcd.firestation.FireStation
 
@@ -53,7 +53,7 @@ object FireStationFrontend:
           fireStations + (fireStationInZone.zone -> fireStation),
           pluviometersPerZone + (fireStationInZone.zone -> fireStationInZone.numberOfPluviometers)
         )
-      case ZoneInAlarmBehavior(zone: Int) =>
+      case ZoneInAlarm(zone: Int) =>
         gui.updateZoneStatus(zone, false)
         Behaviors.same
       case FireStationAction(zone: Int) =>

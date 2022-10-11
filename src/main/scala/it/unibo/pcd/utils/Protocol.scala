@@ -12,7 +12,7 @@ object Protocol:
   final case class InterventionRequest(zoneManager: ActorRef[Command]) extends Command
   final case class AlarmOver() extends Command
   final case class PluviometersChange(pluviometers: List[ActorRef[Command]]) extends Command
-  final case class ZoneInAlarmBehavior(zone: Int) extends Command
+  final case class ZoneInAlarm(zone: Int) extends Command
   final case class NotifyFrontEnd(frontEnd: ActorRef[Command]) extends Command
   final case class FireStationAction(zone: Int) extends Command
   final case class FireStationActionOver(zone: Int) extends Command
