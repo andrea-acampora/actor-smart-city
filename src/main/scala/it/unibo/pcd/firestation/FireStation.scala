@@ -13,7 +13,7 @@ import it.unibo.pcd.utils.Protocol.{
   NotifyFireStation,
   NotifyFrontEnd,
   PluviometersChange,
-  ZoneInAlarm
+  ZoneInAlarmBehavior
 }
 
 object FireStation:
@@ -36,13 +36,13 @@ object FireStation:
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case InterventionRequest(zoneManager: ActorRef[Command]) =>
-        frontends.foreach(_ ! ZoneInAlarm(zone))
+        frontends.foreach(_ ! ZoneInAlarmBehavior(zone))
         baseBehavior(ctx, Some(zoneManager), true, fireStationState, pluviometers, zone, frontends)
       case PluviometersChange(pluviometerList) =>
         frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
         baseBehavior(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationAction(zone: Int) =>
-        fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
+        fireStationInActionBehavior(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometers, zone, frontends)
       case NotifyFrontEnd(frontEnd: ActorRef[Command]) =>
         frontEnd ! NotifyFireStation(FireStationInZone(zone, pluviometers.size), ctx.self)
         if (frontends.contains(frontEnd))
@@ -52,7 +52,7 @@ object FireStation:
       case _ => Behaviors.same
     }
 
-  def fireStationInAction(
+  def fireStationInActionBehavior(
       ctx: ActorContext[Command],
       zoneManager: Option[ActorRef[Command]],
       zoneInAlarm: Boolean,
@@ -64,7 +64,7 @@ object FireStation:
     Behaviors.receiveMessage {
       case PluviometersChange(pluviometerList) =>
         frontends.foreach(_ ! NotifyFireStation(FireStationInZone(zone, pluviometerList.size), ctx.self))
-        fireStationInAction(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
+        fireStationInActionBehavior(ctx, zoneManager, zoneInAlarm, fireStationState, pluviometerList, zone, frontends)
       case FireStationActionOver(zone: Int) =>
         if (zoneManager.isDefined) zoneManager.get ! AlarmOver()
         baseBehavior(ctx, zoneManager, false, fireStationState, pluviometers, zone, frontends)
@@ -73,7 +73,7 @@ object FireStation:
         if (frontends.contains(frontEnd))
           Behaviors.same
         else
-          fireStationInAction(
+          fireStationInActionBehavior(
             ctx,
             zoneManager,
             zoneInAlarm,

@@ -53,11 +53,11 @@ object Pluviometer:
       zoneManagerRef ! NotifyState(inAlarm)
       Behaviors.same
     case AlarmConfirmed() =>
-      alarmBehaviour(zoneManagerRef, position, ctx)
+      alarmBehavior(zoneManagerRef, position, ctx)
     case _ => Behaviors.same
   }
 
-  def alarmBehaviour(
+  def alarmBehavior(
       zoneManagerRef: ActorRef[Command],
       position: (Int, Int),
       ctx: ActorContext[Command]

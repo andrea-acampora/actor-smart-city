@@ -43,11 +43,11 @@ object ZoneManager:
           baseBehavior(ctx, serviceKey, fireStation, pluviometersList)
       case NotifyAlarm() =>
         pluviometers.foreach(_ ! CheckAlarm())
-        manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
+        manageAlarmBehavior(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
       case _ => Behaviors.same
     }
 
-  def manageAlarmBehaviour(
+  def manageAlarmBehavior(
       ctx: ActorContext[Command | Receptionist.Listing],
       serviceKey: String,
       fireStation: ActorRef[Command],
@@ -59,7 +59,7 @@ object ZoneManager:
       if (pluviometersList == pluviometers) Behaviors.same
       else
         fireStation ! PluviometersChange(pluviometersList)
-        manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
+        manageAlarmBehavior(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case NotifyState(state) =>
       val updatedNotifications: Notification =
         state match
@@ -69,14 +69,14 @@ object ZoneManager:
         if (updatedNotifications.alarm > updatedNotifications.notAlarm)
           pluviometers.foreach(_ ! AlarmConfirmed())
           fireStation ! InterventionRequest(ctx.self)
-          waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
+          waitingFireStationBehavior(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
         else baseBehavior(ctx, serviceKey, fireStation, pluviometers)
       else
-        manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
+        manageAlarmBehavior(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
     case _ => Behaviors.same
   }
 
-  def waitingFireFightersBehaviour(
+  def waitingFireStationBehavior(
       ctx: ActorContext[Command | Receptionist.Listing],
       serviceKey: String,
       fireStation: ActorRef[Command],
@@ -88,7 +88,7 @@ object ZoneManager:
       if (pluviometersList == pluviometers) Behaviors.same
       else
         fireStation ! PluviometersChange(pluviometersList)
-        waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
+        waitingFireStationBehavior(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case AlarmOver() =>
       pluviometers.foreach(_ ! AlarmOver())
       baseBehavior(ctx, serviceKey, fireStation, pluviometers)
