@@ -25,10 +25,10 @@ object ZoneManager:
   ): Behavior[Command | Receptionist.Listing] =
     Behaviors.setup[Command | Receptionist.Listing] { ctx =>
       ctx.system.receptionist ! Receptionist.Subscribe(ServiceKey[Command](serviceKey), ctx.self)
-      zoneManagerLogic(ctx, serviceKey, fireStation, List.empty)
+      baseBehavior(ctx, serviceKey, fireStation, List.empty)
     }
 
-  def zoneManagerLogic(
+  def baseBehavior(
       ctx: ActorContext[Command | Receptionist.Listing],
       serviceKey: String,
       fireStation: ActorRef[Command],
@@ -40,7 +40,7 @@ object ZoneManager:
         if (pluviometersList == pluviometers) Behaviors.same
         else
           fireStation ! PluviometersChange(pluviometersList)
-          zoneManagerLogic(ctx, serviceKey, fireStation, pluviometersList)
+          baseBehavior(ctx, serviceKey, fireStation, pluviometersList)
       case NotifyAlarm() =>
         pluviometers.foreach(_ ! CheckAlarm())
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, Notification(0, 0))
@@ -70,7 +70,7 @@ object ZoneManager:
           pluviometers.foreach(_ ! AlarmConfirmed())
           fireStation ! InterventionRequest(ctx.self)
           waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
-        else zoneManagerLogic(ctx, serviceKey, fireStation, pluviometers)
+        else baseBehavior(ctx, serviceKey, fireStation, pluviometers)
       else
         manageAlarmBehaviour(ctx, serviceKey, fireStation, pluviometers, updatedNotifications)
     case _ => Behaviors.same
@@ -91,6 +91,6 @@ object ZoneManager:
         waitingFireFightersBehaviour(ctx, serviceKey, fireStation, pluviometersList, notifications)
     case AlarmOver() =>
       pluviometers.foreach(_ ! AlarmOver())
-      zoneManagerLogic(ctx, serviceKey, fireStation, pluviometers)
+      baseBehavior(ctx, serviceKey, fireStation, pluviometers)
     case _ => Behaviors.same
   }

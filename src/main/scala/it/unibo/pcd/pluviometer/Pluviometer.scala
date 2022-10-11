@@ -32,11 +32,11 @@ object Pluviometer:
       Behaviors.withTimers { timers =>
         timers.startTimerAtFixedRate(CheckWaterLevel(), period)
         ctx.system.receptionist ! Receptionist.Register(ServiceKey[Command](serviceKey), ctx.self)
-        baseBehaviour(zoneManagerRef, position, ctx, false, 0)
+        baseBehavior(zoneManagerRef, position, ctx, false, 0)
       }
     }
 
-  def baseBehaviour(
+  def baseBehavior(
       zoneManagerRef: ActorRef[Command],
       position: (Int, Int),
       ctx: ActorContext[Command],
@@ -47,8 +47,8 @@ object Pluviometer:
       val newWaterLevel = Math.max(0, waterLevel + Random.between(-5, 10))
       if (newWaterLevel >= waterLevelAlarm)
         zoneManagerRef ! NotifyAlarm()
-        baseBehaviour(zoneManagerRef, position, ctx, true, newWaterLevel)
-      else baseBehaviour(zoneManagerRef, position, ctx, false, newWaterLevel)
+        baseBehavior(zoneManagerRef, position, ctx, true, newWaterLevel)
+      else baseBehavior(zoneManagerRef, position, ctx, false, newWaterLevel)
     case CheckAlarm() =>
       zoneManagerRef ! NotifyState(inAlarm)
       Behaviors.same
@@ -63,6 +63,6 @@ object Pluviometer:
       ctx: ActorContext[Command]
   ): Behavior[Command] = Behaviors.receiveMessage {
     case AlarmOver() =>
-      baseBehaviour(zoneManagerRef, position, ctx, false, 0)
+      baseBehavior(zoneManagerRef, position, ctx, false, 0)
     case _ => Behaviors.same
   }

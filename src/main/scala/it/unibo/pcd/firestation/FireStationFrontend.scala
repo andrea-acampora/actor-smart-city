@@ -29,10 +29,10 @@ object FireStationFrontend:
     Behaviors.setup[Command | Receptionist.Listing] { ctx =>
       ctx.system.receptionist ! Receptionist.Subscribe(FireStation.service, ctx.self)
       val gui = FireStationGUI(width, height, nZones, ctx.self)
-      frontendLogic(ctx, gui, Map.empty, Map.empty)
+      baseBehavior(ctx, gui, Map.empty, Map.empty)
     }
 
-  def frontendLogic(
+  def baseBehavior(
       ctx: ActorContext[Command | Receptionist.Listing],
       gui: FireStationGUI,
       fireStations: Map[Int, ActorRef[Command]],
@@ -44,10 +44,10 @@ object FireStationFrontend:
         if (fireStationList == fireStations.values.toList) Behaviors.same
         else
           fireStationList.foreach(_ ! NotifyFrontEnd(ctx.self))
-          frontendLogic(ctx, gui, fireStations, pluviometersPerZone)
+          baseBehavior(ctx, gui, fireStations, pluviometersPerZone)
       case NotifyFireStation(fireStationInZone: FireStationInZone, fireStation: ActorRef[Command]) =>
         gui.updatePluviometers((fireStationInZone.zone, fireStationInZone.numberOfPluviometers))
-        frontendLogic(
+        baseBehavior(
           ctx,
           gui,
           fireStations + (fireStationInZone.zone -> fireStation),
