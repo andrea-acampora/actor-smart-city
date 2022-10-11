@@ -24,7 +24,6 @@ lazy val root = project
       "org.scalatest" %% "scalatest" % "3.2.13" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test,
       "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion, // For standard log configuration
-      "com.typesafe.akka" %% "akka-remote" % AkkaVersion, // For akka remote
       "com.typesafe.akka" %% "akka-cluster-typed" % AkkaVersion, // akka clustering module
       "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3"
