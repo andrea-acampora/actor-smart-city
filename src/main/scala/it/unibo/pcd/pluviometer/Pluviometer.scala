@@ -45,18 +45,14 @@ object Pluviometer:
   ): Behavior[Command] = Behaviors.receiveMessage {
     case CheckWaterLevel() =>
       val newWaterLevel = Math.max(0, waterLevel + Random.between(-5, 10))
-      ctx.log.info("Pluviometer in " + position + " water level: " + newWaterLevel)
       if (newWaterLevel >= waterLevelAlarm)
-        ctx.log.info("Pluviometer in " + position + " level high!")
         zoneManagerRef ! NotifyAlarm()
         baseBehaviour(zoneManagerRef, position, ctx, true, newWaterLevel)
       else baseBehaviour(zoneManagerRef, position, ctx, false, newWaterLevel)
     case CheckAlarm() =>
-      ctx.log.info("PROTOCOL: Pluviometer in " + position + "asked state from manager and it said " + inAlarm)
       zoneManagerRef ! NotifyState(inAlarm)
       Behaviors.same
     case AlarmConfirmed() =>
-      ctx.log.info("PROTOCOL: Pluviometer in " + position + " get alarm confirmed!")
       alarmBehaviour(zoneManagerRef, position, ctx)
     case _ => Behaviors.same
   }
@@ -67,7 +63,6 @@ object Pluviometer:
       ctx: ActorContext[Command]
   ): Behavior[Command] = Behaviors.receiveMessage {
     case AlarmOver() =>
-      ctx.log.info("PROTOCOL: Pluviometer in " + position + " received alarm over!")
       baseBehaviour(zoneManagerRef, position, ctx, false, 0)
     case _ => Behaviors.same
   }
